@@ -207,7 +207,7 @@ const places = [
   {
     id: 2,
     name: "Библиотека музея Гараж",
-    type: "library",
+    type: ["library", "coworking"]
     address: "ул. Крымский Вал, 9, стр. 32",
     lat: 55.727934,
     lng: 37.601803,
@@ -246,7 +246,9 @@ const markers = {};
 const placesEl = document.getElementById("places");
 
 function getPlaces(){
-  return activeType === "all" ? places : places.filter(p => p.type === activeType);
+ return activeType === "all"
+  ? places
+  : places.filter(p => p.type.includes(activeType)); 
 }
 
 function renderCards(){
