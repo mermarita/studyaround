@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyAround</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Твой ключ уже вставлен ниже. Если решишь выложить сайт в публичный
+     репозиторий — в кабинете developer.tech.yandex.ru можно ограничить
+     ключ конкретным доменом, чтобы им не пользовались посторонние сайты. -->
+<script src="https://api-maps.yandex.ru/2.1/?apikey=1dc32d75-7926-4a47-81b6-5fd9f5d4fa08&lang=ru_RU"></script>
+
+<style>
+  /* ============================================================
+     ТОКЕНЫ ДИЗАЙНА
+     ============================================================ */
+  :root{
+    --paper:#FFFDF5;     /* фон страницы */
+    --navy:#282B4A;      /* "Study" в лого, плашки удобств, заголовки */
+    --maroon:#9E3C57;    /* "Around" в лого, адрес, активный фильтр */
+    --text-soft:#93949F; /* подзаголовок, описание места */
+    --pill-bg:#EBEAE6;   /* неактивные кнопки-фильтры */
+    --card-bg:#D9D9D9;   /* карта и карточки мест */
+
+    --font-logo: 'Playfair Display', Georgia, serif;
+    --font-ui: 'Inter', system-ui, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--navy);
+    font-family:var(--font-ui);
+    line-height:1.5;
+  }
+
+  .page{
+    width:min(100%, 430px);
+    margin:0 auto;
+    padding:2.2rem 1.3rem 3rem;
+  }
+
+  /* --- Лого --- */
+  h1{
+    font-family:var(--font-logo);
+    font-weight:700;
+    font-size:2.1rem;
+    line-height:0.95;
+    margin:0 0 0.7rem;
+    letter-spacing:-0.5px;
+  }
+  h1 span{ color:var(--maroon); }
+
+  .intro{
+    font-size:0.95rem;
+    color:var(--text-soft);
+    max-width:355px;
+    margin:0 0 1.3rem;
+  }
+
+  /* --- Кнопки-фильтры --- */
+  .filters{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:0.5rem;
+    margin-bottom:1.3rem;
+  }
+  .filter-btn{
+    font-family:var(--font-ui);
+    font-size:0.78rem;
+    font-weight:500;
+    padding:0.55rem 0.3rem;
+    border-radius:8px;
+    border:none;
+    background:var(--pill-bg);
+    color:var(--navy);
+    cursor:pointer;
+    transition:background 0.15s, color 0.15s;
+  }
+  .filter-btn.active{
+    background:var(--maroon);
+    color:#fff;
+  }
+
+  /* --- Карта --- */
+  #map{
+    width:100%;
+    height:340px;
+    border-radius:12px;
+    background:var(--card-bg);
+    margin-bottom:1.3rem;
+    overflow:hidden;
+  }
+
+  /* --- Список карточек --- */
+  .places{
+    display:flex;
+    flex-direction:column;
+    gap:0.7rem;
+  }
+  .place-card{
+    width:100%;
+    text-align:left;
+    border:0;
+    background:var(--card-bg);
+    border-radius:12px;
+    padding:0.9rem 1rem;
+    cursor:pointer;
+    font-family:var(--font-ui);
+    color:var(--navy);
+  }
+  .place-card.highlighted{ outline:2px solid var(--maroon); }
+  .place-card h2{
+    font-size:0.98rem;
+    font-weight:600;
+    margin:0 0 0.2rem;
+  }
+  .place-card .address{
+    font-size:0.82rem;
+    font-weight:500;
+    color:var(--maroon);
+    margin:0 0 0.35rem;
+  }
+  .place-card .description{
+    font-size:0.85rem;
+    color:var(--text-soft);
+    margin:0 0 0.6rem;
+  }
+
+  /* --- Плашки удобств: тёмно-синие, текст цвета фона --- */
+  .tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.4rem;
+  }
+  .tag{
+    font-size:0.72rem;
+    font-weight:500;
+    color:var(--paper);
+    background:var(--navy);
+    padding:0.25rem 0.6rem;
+    border-radius:100px;
+  }
+
+  .empty{
+    padding:1.5rem 1rem;
+    text-align:center;
+    color:var(--text-soft);
+    background:var(--card-bg);
+    border-radius:12px;
+    font-size:0.9rem;
+  }
+
+  @media(min-width:760px){
+    .page{ width:min(100%, 980px); padding-top:3rem; }
+    h1{ font-size:3rem; }
+    .intro{ max-width:520px; font-size:1.05rem; }
+    .filters{ width:520px; }
+    #map{ height:430px; }
+    .places{ display:grid; grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+
+<body>
+  <main class="page">
+    <h1>Study<span>Around</span></h1>
+
+    <p class="intro">
+      Библиотеки, кафе и тихие места для занятий рядом с тобой — с описанием, фото и удобствами каждой точки.
+    </p>
+
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-type="all">Все</button>
+      <button class="filter-btn" data-type="cafe">Кафе</button>
+      <button class="filter-btn" data-type="library">Библиотеки</button>
+      <button class="filter-btn" data-type="coworking">Коворкинг</button>
+    </div>
+
+    <div id="map"></div>
+    <section class="places" id="places"></section>
+  </main>
+
+<script>
+/* ================================================================
+   ДАННЫЕ — твои места, плюс поле tags для плашек удобств.
+   Добавляй свои варианты тегов: "Wi-Fi", "Кофе", "Розетки",
+   "Бесплатно", "Платный вход", "Коворкинг", "До 23:00" и т.д.
+================================================================ */
+
+const places = [
+  {
+    id: 1,
+    name: "Центральная городская библиотека",
+    type: "library",
+    address: "ул. Примерная, 12",
+    lat: 55.751244,
+    lng: 37.618423,
+    description: "Просторные читальные залы, бесплатный Wi-Fi, много розеток.",
+    tags: ["Wi-Fi", "Розетки", "Бесплатно"]
+  },
+  {
+    id: 2,
+    name: "Кафе «Страница»",
+    type: "cafe",
+    address: "пр. Книжников, 5",
+    lat: 55.755814,
+    lng: 37.617635,
+    description: "Спокойное место для работы и учёбы, есть кофе и розетки.",
+    tags: ["Кофе", "Розетки"]
+  },
+  {
+    id: 3,
+    name: "Surf Coffee x Cave",
+    type: "cafe",
+    address: "ул. Новокузнецкая, 6",
+    lat: 55.738404,
+    lng: 37.629789,
+    description: "Три зала, есть коворкинг-зона, бесплатный Wi-Fi.",
+    tags: ["Wi-Fi", "Коворкинг"]
+  },
+  {
+    id: 4,
+    name: "Библиотека №19 имени Ф.М. Достоевского",
+    type: "library",
+    address: "Чистопрудный бульвар, 25",
+    lat: 55.760150,
+    lng: 37.646830,
+    description: "Тихое и спокойное место, вход бесплатный, есть розетки.",
+    tags: ["Бесплатно", "Розетки"]
+  }
+];
+
+/* ================================================================
+   ЛОГИКА САЙТА
+================================================================ */
+
+let map;
+let activeType = "all";
+const markers = {};
+const placesEl = document.getElementById("places");
+
+function getPlaces(){
+  return activeType === "all" ? places : places.filter(p => p.type === activeType);
+}
+
+function renderCards(){
+  const list = getPlaces();
+
+  if(!list.length){
+    placesEl.innerHTML = '<div class="empty">В этой категории пока нет мест.</div>';
+    return;
+  }
+
+  placesEl.innerHTML = list.map(place => `
+    <button class="place-card" data-id="${place.id}">
+      <h2>${place.name}</h2>
+      <p class="address">${place.address}</p>
+      <p class="description">${place.description}</p>
+      <div class="tags">
+        ${place.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+      </div>
+    </button>
+  `).join("");
+
+  document.querySelectorAll(".place-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const place = places.find(p => p.id === Number(card.dataset.id));
+      if(!map || !place) return;
+      map.setCenter([place.lat, place.lng], 15, { duration: 250 });
+      markers[place.id]?.balloon.open();
+      highlightCard(place.id);
+    });
+  });
+}
+
+function highlightCard(id){
+  document.querySelectorAll(".place-card").forEach(c => c.classList.remove("highlighted"));
+  const el = document.querySelector(`.place-card[data-id="${id}"]`);
+  if(el) el.classList.add("highlighted");
+}
+
+function renderMarkers(){
+  if(!map) return;
+  map.geoObjects.removeAll();
+
+  getPlaces().forEach(place => {
+    const marker = new ymaps.Placemark(
+      [place.lat, place.lng],
+      {
+        balloonContentHeader: place.name,
+        balloonContentBody: `${place.address}<br>${place.description}`
+      },
+      { preset: "islands#maroonDotIcon" }
+    );
+    marker.events.add("click", () => highlightCard(place.id));
+    markers[place.id] = marker;
+    map.geoObjects.add(marker);
+  });
+}
+
+function update(){
+  renderCards();
+  renderMarkers();
+}
+
+document.querySelectorAll(".filter-btn").forEach(button => {
+  button.addEventListener("click", () => {
+    activeType = button.dataset.type;
+    document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+    button.classList.add("active");
+    update();
+  });
+});
+
+renderCards();
+
+// ymaps.ready ждёт полной загрузки API, прежде чем создавать карту
+ymaps.ready(() => {
+  map = new ymaps.Map("map", {
+    center: [places[0].lat, places[0].lng],
+    zoom: 12,
+    controls: ["zoomControl"]
+  });
+  renderMarkers();
+});
+</script>
+</body>
+</html>
